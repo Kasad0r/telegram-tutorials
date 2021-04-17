@@ -1,5 +1,7 @@
 package org.kasad0r.telegramtutorials;
 
+import org.kasad0r.telegramtutorials.services.SendMessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -14,6 +16,7 @@ public class HelloWorldBot extends TelegramLongPollingBot {
   private String username;
   @Value("${telegram.bot.token}")
   private String token;
+  private SendMessageService sendMessageService;
 
   @Override
   public String getBotUsername() {
@@ -30,16 +33,13 @@ public class HelloWorldBot extends TelegramLongPollingBot {
     if (update.hasMessage()) {
       Message message = update.getMessage();
       if (message.hasText()) {
-        String text = message.getText();
-        SendMessage sm = new SendMessage();
-        sm.setText("Ви відправили: " + text);
-        sm.setChatId(String.valueOf(message.getChatId()));
-        try {
-          execute(sm);
-        } catch (TelegramApiException e) {
-          e.printStackTrace();
-        }
+        sendMessageService.test2(message);
       }
     }
+  }
+
+  @Autowired
+  public void setSendMessageService(SendMessageService sendMessageService) {
+    this.sendMessageService = sendMessageService;
   }
 }
