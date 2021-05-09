@@ -3,12 +3,11 @@ package org.kasad0r.telegramtutorials.cache;
 import java.util.List;
 
 public interface Cache<T> {
+  void add(T t);
 
-  T findById(Long id);
+  void remove(T t);
 
-  void removeById(Long id);
+  T findBy(Long id);
 
   List<T> getAll();
-
-  void add(T t);
 }

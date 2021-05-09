@@ -17,12 +17,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.kasad0r.telegramtutorials.domain.Position.INPUT_FULLNAME;
-
 @Component
 public class MessageHandler implements Handler<Message> {
 
   private final MessageSender messageSender;
+
   private final Cache<BotUser> cache;
 
   public MessageHandler(MessageSender messageSender, Cache<BotUser> cache) {
@@ -30,62 +29,64 @@ public class MessageHandler implements Handler<Message> {
     this.cache = cache;
   }
 
-  private BotUser createNewBotUser(Message message) {
-    BotUser botUser = new BotUser();
-    botUser.setId(message.getChatId());
-    botUser.setUsername(message.getFrom().getUserName());
-    botUser.setPosition(INPUT_FULLNAME);
-    return botUser;
+  private BotUser generateUserFromMessage(Message message) {
+    BotUser user = new BotUser();
+    user.setUsername(message.getFrom().getUserName());
+    user.setId(message.getChatId());
+    user.setPosition(Position.INPUT_USERNAME);
+    return user;
   }
 
   @Override
   public void choose(Message message) {
-    BotUser user = cache.findById(message.getChatId());
+    BotUser user = cache.findBy(message.getChatId());
     if (user != null) {
       switch (user.getPosition()) {
-        case INPUT_FULLNAME:
-          if (message.hasText()) {
-            user.setFullName(message.getText());
-            user.setPosition(Position.INPUT_PHONE_NUMBER);
-            messageSender.sendMessage(
-                    SendMessage.builder()
-                            .text("Введіть номер телефона(кнока знизу)")
-                            .chatId(String.valueOf(message.getChatId()))
-                            .replyMarkup(ReplyKeyboardMarkup.builder()
-                                    .keyboardRow(new KeyboardRow() {{
-                                      add(KeyboardButton.builder()
-                                              .text("Відправити номер")
-                                              .requestContact(true)
-                                              .build());
-                                    }}).build())
-                            .build());
-          }
+        case INPUT_USERNAME:
+          user.setFullName(message.getText());
+          user.setPosition(Position.INPUT_PHONE_NUMBER);
+          messageSender.sendMessage(
+                  SendMessage.builder()
+                          .text("Натисни на клавішу щоб відправити номер телефону. ")
+                          .chatId(String.valueOf(message.getChatId()))
+                          .replyMarkup(ReplyKeyboardMarkup.builder()
+                                  .oneTimeKeyboard(true)
+                                  .resizeKeyboard(true)
+                                  .keyboardRow(new KeyboardRow() {{
+                                    add(KeyboardButton.builder()
+                                            .text("Відправити номер")
+                                            .requestContact(true)
+                                            .build());
+                                  }}).build())
+                          .build()
+          );
           break;
         case INPUT_PHONE_NUMBER:
-          user.setPhoneNumber(message.getContact().getPhoneNumber());
-          user.setPosition(Position.INPUT_PHONE_NUMBER);
-          messageSender.sendMessage(SendMessage.builder()
-                  .parseMode("HTML")
-                  .chatId(String.valueOf(user.getId()))
-                  .text("<b>id:</b>" + user.getId() +
-                          "\n<b>ПІБ:</b> " + user.getFullName() + "\n" +
-                          "<b>Номер телефону:</b>" + user.getPhoneNumber())
-                  .build());
-
-
+          if (message.hasContact()) {
+            user.setPhoneNumber(message.getContact().getPhoneNumber());
+            user.setPosition(Position.NONE);
+            messageSender.sendMessage(
+                    SendMessage.builder()
+                            .text("<b>Id</b>" + user.getId() + "\n<b>ПІБ</b>" +
+                                    user.getFullName() + "\n<b>Моб. телефон</b>"
+                                    + user.getPhoneNumber())
+                            .parseMode("HTML")
+                            .chatId(String.valueOf(message.getChatId()))
+                            .build()
+            );
+          }
           break;
-
       }
     } else if (message.hasText()) {
       if (message.getText().equals("/reg")) {
-        BotUser newBotUser = createNewBotUser(message);
-        cache.add(newBotUser);
-        messageSender.sendMessage(SendMessage.builder()
-                .text("Відправте ваш ПІБ:")
-                .chatId(String.valueOf(message.getChatId()))
-                .build());
-      }
-      if (message.getText().equals("/get_poem")) {
+        cache.add(generateUserFromMessage(message));
+        messageSender.sendMessage(
+                SendMessage.builder()
+                        .text("Введи свій ПІБ:")
+                        .chatId(String.valueOf(message.getChatId()))
+                        .build()
+        );
+      } else if (message.getText().equals("/get_poem")) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
         sendMessage.setText("Як умру, то поховайте\n" +
